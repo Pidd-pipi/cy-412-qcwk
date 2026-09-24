@@ -21,7 +21,7 @@ docker compose up -d
 - **物业工作台**：汇总待办报修、本月已收费用和近期公告。
 - **报修管理**：业主创建水电/家具/公共设施等报修；物业筛选、分配和更新进度。
 - **费用缴纳**：按业主展示账单，通过支付宝沙箱模拟完成支付和记录查询。
-- **社区公告**：置顶、发布、详情查看与阅读计数。
+- **社区公告**：发布时可选全小区 / 楼栋 / 单元通知范围；住户列表与首页只出现与自己房产匹配的公告，物业可见全部；置顶、详情查看与阅读计数保持不变；紧急公告需住户确认已读（重复确认不重复计数），物业可在列表与详情查看确认人数及未确认住户名单。
 - **个人中心**：更新昵称、头像 URL，并绑定楼栋、单元和房间。
 - **安全与治理**：JWT 登录态、RBAC、操作日志、敏感接口内存限流、统一 JSON 响应。
 
@@ -73,8 +73,9 @@ cd backend && go build ./...
 | PATCH | `/repairs/:id/status` | 更新进度，`repair:manage` |
 | GET/POST | `/payments` | 账单列表 / 生成账单 |
 | POST | `/payments/:id/pay` | 模拟支付（限流） |
-| GET/POST | `/announcements` | 公告列表 / 发布，发布需 `announcement:publish` |
-| GET | `/announcements/:id` | 公告详情并记录阅读 |
+| GET/POST | `/announcements` | 公告列表（住户按房产范围过滤，物业看全部）/ 发布，发布需 `announcement:publish`，发布体含 `scope`（all/building/unit）、`scope_building`、`scope_unit` |
+| GET | `/announcements/:id` | 公告详情并记录阅读；紧急公告返回确认人数，物业另含 `unconfirmed_users` |
+| POST | `/announcements/:id/confirm` | 住户确认紧急公告已读，重复确认幂等不增加人数 |
 | GET | `/dashboard/summary` | 工作台汇总 |
 | GET | `/operation-logs` | 操作日志，`log:read` |
 

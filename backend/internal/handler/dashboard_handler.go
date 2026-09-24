@@ -17,7 +17,7 @@ func NewDashboardHandler(r *service.RepairService, p *service.PaymentService, a 
 func (h *DashboardHandler) Summary(c *gin.Context) {
 	open, _ := h.repairs.OpenCount()
 	amount, _ := h.payments.MonthlyPaid()
-	anns, _ := h.anns.List()
+	anns, _ := h.anns.List(c.GetUint("userID"), c.GetString("role"))
 	if len(anns) > 3 {
 		anns = anns[:3]
 	}

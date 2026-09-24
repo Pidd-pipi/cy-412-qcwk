@@ -31,8 +31,11 @@ type CreatePaymentRequest struct {
 	Month   string  `json:"month" validate:"required,len=7"`
 }
 type CreateAnnouncementRequest struct {
-	Title    string `json:"title" validate:"required,min=2"`
-	Content  string `json:"content" validate:"required,min=5"`
-	Category string `json:"category" validate:"required,oneof=通知 活动 紧急"`
-	Top      bool   `json:"top"`
+	Title         string `json:"title" validate:"required,min=2"`
+	Content       string `json:"content" validate:"required,min=5"`
+	Category      string `json:"category" validate:"required,oneof=通知 活动 紧急"`
+	Scope         string `json:"scope" validate:"omitempty,oneof=all building unit"`
+	ScopeBuilding string `json:"scope_building"`
+	ScopeUnit     string `json:"scope_unit"`
+	Top           bool   `json:"top"`
 }

@@ -35,4 +35,7 @@ type CreateAnnouncementRequest struct {
 	Content  string `json:"content" validate:"required,min=5"`
 	Category string `json:"category" validate:"required,oneof=通知 活动 紧急"`
 	Top      bool   `json:"top"`
+	Scope    string `json:"scope" validate:"required,oneof=all building unit"`
+	Building string `json:"building"`
+	Unit     string `json:"unit"`
 }

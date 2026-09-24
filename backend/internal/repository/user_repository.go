@@ -32,3 +32,19 @@ func (r *UserRepository) ListStaff() (out []model.User, e error) {
 	e = r.DB.Where("role IN ?", []string{"staff", "admin"}).Find(&out).Error
 	return
 }
+
+// Buildings 住户已绑定房产中出现过的楼栋（供发布公告选择范围）。
+func (r *UserRepository) Buildings() (out []string, e error) {
+	e = r.DB.Model(&model.User{}).
+		Where("role = ? AND building <> ''", "resident").
+		Distinct("building").Order("building").Pluck("building", &out).Error
+	return
+}
+
+// Units 指定楼栋下住户已绑定房产中出现过的单元。
+func (r *UserRepository) Units(building string) (out []string, e error) {
+	e = r.DB.Model(&model.User{}).
+		Where("role = ? AND building = ? AND unit <> ''", "resident", building).
+		Distinct("unit").Order("unit").Pluck("unit", &out).Error
+	return
+}

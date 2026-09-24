@@ -5,4 +5,9 @@ paths:
   /api/v1/auth/login: { post: { summary: Login } }
   /api/v1/repairs: { get: { summary: List repairs }, post: { summary: Create repair } }
   /api/v1/payments: { get: { summary: List payments }, post: { summary: Create bill } }
-  /api/v1/announcements: { get: { summary: List announcements }, post: { summary: Publish announcement } }
+  /api/v1/announcements:
+    get: { summary: 公告列表（住户按房产过滤，物业查看全部并返回紧急公告统计） }
+    post: { summary: 发布公告，body 含 scope(all/building/unit)、building、unit }
+  /api/v1/announcements/{id}: { get: { summary: 公告详情，普通公告记录阅读，紧急公告返回确认状态/名单 } }
+  /api/v1/announcements/{id}/confirm: { post: { summary: 住户确认紧急公告已读（幂等，重复确认不增加人数） } }
+  /api/v1/announcement-scope-options: { get: { summary: 发布可选楼栋/单元，需 announcement:publish } }

@@ -21,7 +21,7 @@ docker compose up -d
 - **物业工作台**：汇总待办报修、本月已收费用和近期公告。
 - **报修管理**：业主创建水电/家具/公共设施等报修；物业筛选、分配和更新进度。
 - **费用缴纳**：按业主展示账单，通过支付宝沙箱模拟完成支付和记录查询。
-- **社区公告**：置顶、发布、详情查看与阅读计数。
+- **社区公告**：发布范围支持全小区 / 指定楼栋 / 指定单元；住户列表与首页只出现与自己房产匹配的公告，物业可查看全部。置顶、详情查看与阅读计数；紧急公告需住户确认已读（重复确认不重复计数），物业可在列表与详情查看确认人数和未确认名单，普通公告继续展示已读人数。
 - **个人中心**：更新昵称、头像 URL，并绑定楼栋、单元和房间。
 - **安全与治理**：JWT 登录态、RBAC、操作日志、敏感接口内存限流、统一 JSON 响应。
 
@@ -73,8 +73,10 @@ cd backend && go build ./...
 | PATCH | `/repairs/:id/status` | 更新进度，`repair:manage` |
 | GET/POST | `/payments` | 账单列表 / 生成账单 |
 | POST | `/payments/:id/pay` | 模拟支付（限流） |
-| GET/POST | `/announcements` | 公告列表 / 发布，发布需 `announcement:publish` |
-| GET | `/announcements/:id` | 公告详情并记录阅读 |
+| GET/POST | `/announcements` | 公告列表（住户按房产过滤，物业查看全部含紧急统计）/ 发布（`announcement:publish`，body 含 `scope/building/unit`） |
+| GET | `/announcements/:id` | 公告详情：普通公告记录阅读；紧急公告住户返回确认状态、物业返回确认人数与未确认名单 |
+| POST | `/announcements/:id/confirm` | 住户确认紧急公告已读（幂等，重复确认不增加人数） |
+| GET | `/announcement-scope-options` | 发布可选楼栋/单元（取值来自住户已绑定房产），`announcement:publish` |
 | GET | `/dashboard/summary` | 工作台汇总 |
 | GET | `/operation-logs` | 操作日志，`log:read` |
 
@@ -119,6 +121,15 @@ OpenAPI 摘要位于 `backend/api/openapi.yaml`。
 - 后端使用：`backend/internal/service/repair_service.go` 状态机、`backend/internal/handler/repair_handler.go` DTO 校验、`backend/internal/constants/log_templates.go`、`backend/internal/util/formatter.go`。
 - 前端定义：`frontend/src/constants/repair.ts`、`frontend/src/types/index.ts`。
 - 前端使用：`frontend/src/components/common/RepairStatusBadge.vue`、`RepairCard.vue`、`frontend/src/pages/Repairs.vue` 的筛选器、`frontend/src/api/repair.ts`、`frontend/src/hooks/useRepairStats.ts`。
+
+### AnnouncementScope（公告发布范围）
+
+- 值：`all`（全小区）、`building`（指定楼栋）、`unit`（指定单元）
+- 后端定义：`backend/internal/constants/announcement.go`；模型 `Announcement.scope/building/unit`（`backend/internal/model/announcement.go`）。
+- 后端使用：`announcement_service.go` 范围校验与过滤、`announcement_repository.go` 的 `ListForResident/VisibleByResident/TargetResidents`、`dto/requests.go` 的 `oneof` 校验、`cmd/server/main.go` 种子数据与历史数据回填。
+- 前端定义：`frontend/src/constants/announcement.ts`、`frontend/src/types/index.ts`。
+- 前端使用：`pages/Announcements.vue` 发布范围单选与楼栋/单元选择、`components/common/AnnouncementCard.vue` 的范围标识与紧急确认展示、`api/announcement.ts`。
+- 紧急确认：紧急公告（`category=紧急`）不自动累加 `read_count`，由 `POST /announcements/:id/confirm` 幂等写入 `AnnouncementRead.confirmed`；物业通过 `confirmed_count` 与 `unconfirmed_users` 查看确认人数和未确认名单。
 
 ### UserRole
 

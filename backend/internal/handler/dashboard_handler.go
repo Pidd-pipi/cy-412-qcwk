@@ -17,7 +17,8 @@ func NewDashboardHandler(r *service.RepairService, p *service.PaymentService, a 
 func (h *DashboardHandler) Summary(c *gin.Context) {
 	open, _ := h.repairs.OpenCount()
 	amount, _ := h.payments.MonthlyPaid()
-	anns, _ := h.anns.List()
+	// 公告同样按当前用户角色与房产过滤，住户首页只出现与自己房产匹配的公告。
+	anns, _ := h.anns.List(c.GetUint("userID"), c.GetString("role"))
 	if len(anns) > 3 {
 		anns = anns[:3]
 	}

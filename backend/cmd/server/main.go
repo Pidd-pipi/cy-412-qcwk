@@ -25,6 +25,10 @@ func main() {
 	if err = db.AutoMigrate(&model.User{}, &model.Repair{}, &model.Payment{}, &model.Announcement{}, &model.AnnouncementRead{}, &model.OperationLog{}, &model.Role{}, &model.Permission{}, &model.RolePermission{}); err != nil {
 		log.Fatal(err)
 	}
+	// 旧数据没有 scope 列值时回填为全小区，保证历史公告仍然全员可见。
+	if err = db.Model(&model.Announcement{}).Where("scope = '' OR scope IS NULL").Update("scope", constants.AnnouncementScopeAll).Error; err != nil {
+		log.Fatal(err)
+	}
 	if err = seed(db); err != nil {
 		log.Fatal(err)
 	}
@@ -34,7 +38,7 @@ func main() {
 	pr := repository.NewPaymentRepository(db)
 	ar := repository.NewAnnouncementRepository(db)
 	lr := repository.NewOperationLogRepository(db)
-	sv := router.Services{Users: service.NewUserService(ur, logger), Repairs: service.NewRepairService(rr, ur, logger), Payments: service.NewPaymentService(pr, logger), Announcements: service.NewAnnouncementService(ar, logger), Permissions: service.NewPermissionService(), Logs: service.NewOperationLogService(lr, logger)}
+	sv := router.Services{Users: service.NewUserService(ur, logger), Repairs: service.NewRepairService(rr, ur, logger), Payments: service.NewPaymentService(pr, logger), Announcements: service.NewAnnouncementService(ar, ur, logger), Permissions: service.NewPermissionService(), Logs: service.NewOperationLogService(lr, logger)}
 	log.Printf("SmartEstate server listening on :%s", cfg.Port)
 	if err = router.New(cfg, sv, logger).Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
@@ -58,7 +62,7 @@ func seed(db *gorm.DB) error {
 	if e != nil {
 		return e
 	}
-	users := []model.User{{Phone: "13800000001", PasswordHash: hash, Nickname: "张业主", Role: constants.UserRoleResident, Building: "1栋", Unit: "2单元", Room: "802"}, {Phone: "13800000002", PasswordHash: hash, Nickname: "王管家", Role: constants.UserRoleStaff}, {Phone: "13800000003", PasswordHash: hash, Nickname: "系统管理员", Role: constants.UserRoleAdmin}}
+	users := []model.User{{Phone: "13800000001", PasswordHash: hash, Nickname: "张业主", Role: constants.UserRoleResident, Building: "1栋", Unit: "2单元", Room: "802"}, {Phone: "13800000004", PasswordHash: hash, Nickname: "李业主", Role: constants.UserRoleResident, Building: "3栋", Unit: "1单元", Room: "1503"}, {Phone: "13800000002", PasswordHash: hash, Nickname: "王管家", Role: constants.UserRoleStaff}, {Phone: "13800000003", PasswordHash: hash, Nickname: "系统管理员", Role: constants.UserRoleAdmin}}
 	if e = db.Create(&users).Error; e != nil {
 		return e
 	}
@@ -68,7 +72,13 @@ func seed(db *gorm.DB) error {
 	if e = db.Create(&model.Payment{UserID: users[0].ID, FeeType: "物业费", Amount: 268.50, Month: "2026-08", Status: "unpaid"}).Error; e != nil {
 		return e
 	}
-	if e = db.Create(&model.Announcement{Title: "夏季消防安全提醒", Content: "请勿在楼道堆放杂物，保持消防通道畅通。", Category: "紧急", PublisherID: users[1].ID, PublishAt: time.Now(), Top: true}).Error; e != nil {
+	if e = db.Create(&model.Announcement{Title: "夏季消防安全提醒", Content: "请勿在楼道堆放杂物，保持消防通道畅通。", Category: "紧急", PublisherID: users[2].ID, PublishAt: time.Now(), Top: true, Scope: constants.AnnouncementScopeAll}).Error; e != nil {
+		return e
+	}
+	if e = db.Create(&model.Announcement{Title: "3栋停水检修通知", Content: "3栋因水泵检修将于本周六 9:00-12:00 暂停供水，请提前储水。", Category: "紧急", PublisherID: users[2].ID, PublishAt: time.Now(), Scope: constants.AnnouncementScopeBuilding, Building: "3栋"}).Error; e != nil {
+		return e
+	}
+	if e = db.Create(&model.Announcement{Title: "1栋2单元电梯年检", Content: "1栋2单元电梯本周五进行年度检验，期间暂停使用，详见公告栏。", Category: "通知", PublisherID: users[2].ID, PublishAt: time.Now(), Scope: constants.AnnouncementScopeUnit, Building: "1栋", Unit: "2单元"}).Error; e != nil {
 		return e
 	}
 	for _, p := range []model.Permission{{Code: "repair:manage", Name: "报修管理"}, {Code: "payment:manage", Name: "收费管理"}, {Code: "announcement:publish", Name: "公告发布"}, {Code: "log:read", Name: "日志查看"}} {
